@@ -59,6 +59,8 @@ namespace CaseService.API.CaseService.Domain.Entities
 
         public void Finish()
         {
+            if (Status == "Finished")
+                throw new Exception("Case is already Finished.");
             if (Status != "InReview")
                 throw new Exception("Can only finish cases that are InReview.");
             Status = "Finished";
