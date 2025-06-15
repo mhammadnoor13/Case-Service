@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CaseService.Api.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("cases")]
     public class CasesController : ControllerBase
     {
         private readonly ICaseService _caseService;

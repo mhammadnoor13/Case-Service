@@ -17,7 +17,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins("http://localhost:3000")   // your React app URL
+                .WithOrigins("http://localhost:5173")   // your React app URL
                 .AllowAnyMethod()                       // GET, POST, PUT, DELETE…
                 .AllowAnyHeader()                       // Content-Type, Authorization…
                 .AllowCredentials();                    // if you ever send cookies/auth
@@ -61,7 +61,11 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 // 5) Enable middleware
-app.UseHttpsRedirection();
+// 2) In dev, skip HTTPS redirection so OPTIONS won’t be redirected
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("AllowReactDev");
 
 
