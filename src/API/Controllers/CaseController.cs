@@ -45,6 +45,16 @@ namespace CaseService.Api.Controllers
             return Ok(dto);
         }
 
+        [HttpPost("bulk")]
+        public async Task<IActionResult> GetByIds([FromBody] List<Guid> caseIds, CancellationToken ct)
+        {
+            if (caseIds == null || !caseIds.Any())
+                return BadRequest("Must supply at least one caseId.");
+
+            var cases = await _caseService.GetCasesByIdsAsync(caseIds,ct);
+            return Ok(cases);
+        }
+
         // 3) List all Cases in a given speciality
         // GET /api/cases/speciality/{speciality}
 

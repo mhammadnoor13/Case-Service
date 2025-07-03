@@ -1,6 +1,8 @@
 ﻿using CaseService.API.CaseService.Application.Dtos;
 using CaseService.API.CaseService.Application.Interfaces;
 using CaseService.API.CaseService.Domain.Entities;
+using Contracts;
+
 //using Contracts;
 using MassTransit;
 
@@ -32,14 +34,13 @@ namespace CaseService.API.CaseService.Application.Services
             // 2) Persist it via the repository
             await _repo.SaveAsync(c, ct);
 
-            // 3) Publish the “CaseCreated” integration event
-            //await _publishEndpoint.Publish<ICaseSubmitted>(
-            //    new
-            //    {
-            //        Id = c.Id,
-            //        Speciality = c.Speciality
-            //    }
-            //    );   
+            await _publishEndpoint.Publish<ICaseSubmitted>(
+                new
+                {
+                    Id = c.Id,
+                    Speciality = c.Speciality
+                }
+                );
 
             return c.Id;
         }
@@ -106,6 +107,21 @@ namespace CaseService.API.CaseService.Application.Services
                 c.Status,
                 c.CreatedAt
             ));
+        }
+
+        public async Task<IEnumerable<CaseDto>> GetCasesByIdsAsync(IEnumerable<Guid> caseIds, CancellationToken ct)
+        {
+            var cases = await _repo.GetBulkByIdsAsync(caseIds, ct);
+            
+            var dtos = cases.Select(c=> new CaseDto(
+                c.Id,
+                c.Email, 
+                c.Description,
+                c.Speciality,
+                c.Status,
+                c.CreatedAt)).ToList();
+
+            return dtos;
         }
     }
 }

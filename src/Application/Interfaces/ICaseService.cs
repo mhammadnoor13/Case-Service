@@ -9,6 +9,7 @@ namespace CaseService.API.CaseService.Application.Interfaces
         Task MoveToInReviewAsync(Guid id, CancellationToken ct);
         Task FinishCaseAsync(Guid id, CancellationToken ct);
         Task<CaseDto?> GetCaseByIdAsync(Guid id, CancellationToken ct);
+        Task<IEnumerable<CaseDto>> GetCasesByIdsAsync(IEnumerable<Guid> caseIds, CancellationToken ct);
         Task<IEnumerable<CaseDto>> GetCasesBySpecialityAsync(String speciality, CancellationToken ct);
 
     }

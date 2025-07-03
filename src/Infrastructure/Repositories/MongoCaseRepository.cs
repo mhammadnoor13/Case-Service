@@ -44,5 +44,11 @@ namespace CaseService.API.CaseService.Infrastructure.Repositories
         {
             return _collection.DeleteOneAsync(x => x.Id == id, ct);
         }
+
+        public async Task<IEnumerable<Case>> GetBulkByIdsAsync(IEnumerable<Guid> caseIds, CancellationToken ct)
+        {
+            var filter = Builders<Case>.Filter.In(c => c.Id, caseIds);
+            return await _collection.Find(filter).ToListAsync();
+        }
     }
 }

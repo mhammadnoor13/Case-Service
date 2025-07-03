@@ -6,6 +6,7 @@ namespace CaseService.API.CaseService.Application.Interfaces
     {
         Task SaveAsync(Case c, CancellationToken ct);
         Task<Case?> GetByIdAsync(Guid id, CancellationToken ct);
+        Task<IEnumerable<Case>> GetBulkByIdsAsync(IEnumerable<Guid> caseIds, CancellationToken ct);
         Task<IEnumerable<Case>> GetBySpecialityAsync(string speciality, CancellationToken ct);
         Task DeleteAsync(Guid id, CancellationToken ct);
     }
