@@ -2,9 +2,12 @@
 using CaseService.API.CaseService.Application.Interfaces;
 using CaseService.API.CaseService.Domain.Entities;
 using Contracts;
+using Contracts.Shared.Events;
+
 
 //using Contracts;
 using MassTransit;
+using Microsoft.Extensions.Logging;
 
 namespace CaseService.API.CaseService.Application.Services
 {
@@ -12,14 +15,17 @@ namespace CaseService.API.CaseService.Application.Services
     {
         private readonly ICaseRepository _repo;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly ILogger<CaseService> _logger;
+
 
         public CaseService(
             ICaseRepository repo,
-            IPublishEndpoint publishEndpoint)
+            IPublishEndpoint publishEndpoint,
+            ILogger<CaseService> logger)
         {
             _repo = repo;
             _publishEndpoint = publishEndpoint;
-
+            _logger = logger;
         }
 
         public async Task<Guid> SubmitCaseAsync(
@@ -28,19 +34,16 @@ namespace CaseService.API.CaseService.Application.Services
             string speciality,
             CancellationToken ct)
         {
-            // 1) Create the domain entity (validates inputs)
             var c = Case.Create(email, description, speciality);
 
-            // 2) Persist it via the repository
             await _repo.SaveAsync(c, ct);
 
-            await _publishEndpoint.Publish<ICaseSubmitted>(
-                new
-                {
-                    Id = c.Id,
-                    Speciality = c.Speciality
-                }
-                );
+
+            await _publishEndpoint.Publish<CaseSubmitted>(new
+            {
+               CaseId = c.Id,
+               Speciality = c.Speciality
+            },ct);
 
             return c.Id;
         }
@@ -122,6 +125,11 @@ namespace CaseService.API.CaseService.Application.Services
                 c.CreatedAt)).ToList();
 
             return dtos;
+        }
+
+        public Task AddSuggestionsAsync(Guid id, List<string> suggestions, CancellationToken ct)
+        {
+            throw new NotImplementedException();
         }
     }
 }

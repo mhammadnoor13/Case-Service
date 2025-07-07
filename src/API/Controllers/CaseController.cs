@@ -1,4 +1,6 @@
-﻿using CaseService.API.CaseService.Application.Dtos;
+﻿using API.Models.Requests;
+using API.Models.Responses;
+using CaseService.API.CaseService.Application.Dtos;
 using CaseService.API.CaseService.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,19 +20,21 @@ namespace CaseService.Api.Controllers
 
 
         [HttpPost]
+        [ProducesResponseType(typeof(CreateCaseResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> SubmitCase(
-            [FromBody] SubmitCaseRequest req,
+            [FromBody] CreateCaseRequest req,
             CancellationToken ct)
         {
-            // call into your Application layer
-            var id = await _caseService.SubmitCaseAsync(
+            var caseId = await _caseService.SubmitCaseAsync(
                 req.Email, req.Description, req.Speciality, ct);
 
-            // return 201 Created with a Location header
+            var response = new CreateCaseResponse(caseId);
+
             return CreatedAtAction(
                 nameof(GetById),
-                new { id },
-                new { id });
+                new { id = caseId },
+                response);
         }
 
         // 2) Get a single Case by Id
@@ -88,6 +92,19 @@ namespace CaseService.Api.Controllers
             await _caseService.FinishCaseAsync(id, ct);
             return NoContent();
         }
+
+
+        [HttpPost("{id:guid}/add-suggestions")]
+        public async Task<IActionResult> FinishCase(
+            Guid id,
+            [FromBody] CaseSuggestions req,
+            CancellationToken ct)
+        {
+            await _caseService.AddSuggestionsAsync(id,req.suggestions, ct);
+            return NoContent();
+        }
+
+
         /*
 		// 6) Delete a Case
 		// DELETE /api/cases/{id}
@@ -103,10 +120,5 @@ namespace CaseService.Api.Controllers
     }
 
 
-    // These simple DTOs/request‐models live in your Api project
-    public record SubmitCaseRequest(
-        string Email,
-        string Description,
-        string Speciality
-    );
+
 }

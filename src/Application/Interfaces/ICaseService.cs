@@ -11,6 +11,7 @@ namespace CaseService.API.CaseService.Application.Interfaces
         Task<CaseDto?> GetCaseByIdAsync(Guid id, CancellationToken ct);
         Task<IEnumerable<CaseDto>> GetCasesByIdsAsync(IEnumerable<Guid> caseIds, CancellationToken ct);
         Task<IEnumerable<CaseDto>> GetCasesBySpecialityAsync(String speciality, CancellationToken ct);
+        Task AddSuggestionsAsync (Guid id, List<string> suggestions, CancellationToken ct);
 
     }
 }
