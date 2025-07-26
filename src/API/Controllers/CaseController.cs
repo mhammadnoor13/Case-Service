@@ -1,4 +1,8 @@
-﻿using CaseService.API.CaseService.Application.Dtos;
+﻿using API.Models.Requests;
+using API.Models.Responses;
+using Application.Dtos;
+using Application.Interfaces;
+using CaseService.API.CaseService.Application.Dtos;
 using CaseService.API.CaseService.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,31 +14,34 @@ namespace CaseService.Api.Controllers
     public class CasesController : ControllerBase
     {
         private readonly ICaseService _caseService;
+        private readonly IMailService _mailService;
 
-        public CasesController(ICaseService caseService)
+        public CasesController(ICaseService caseService, IMailService mailService)
         {
             _caseService = caseService;
+            _mailService = mailService;
         }
 
 
         [HttpPost]
+        [ProducesResponseType(typeof(CreateCaseResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> SubmitCase(
-            [FromBody] SubmitCaseRequest req,
+            [FromBody] CreateCaseRequest req,
             CancellationToken ct)
         {
-            // call into your Application layer
-            var id = await _caseService.SubmitCaseAsync(
-                req.Email, req.Description, req.Speciality, ct);
+            var caseId = await _caseService.SubmitCaseAsync(
+                req.Email,req.Title, req.Description, req.Speciality, ct);
 
-            // return 201 Created with a Location header
+            var response = new CreateCaseResponse(caseId);
+
             return CreatedAtAction(
                 nameof(GetById),
-                new { id },
-                new { id });
+                new { id = caseId },
+                response);
         }
 
-        // 2) Get a single Case by Id
-        // GET /api/cases/{id}
+
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<CaseDto>> GetById(
             Guid id,
@@ -55,8 +62,6 @@ namespace CaseService.Api.Controllers
             return Ok(cases);
         }
 
-        // 3) List all Cases in a given speciality
-        // GET /api/cases/speciality/{speciality}
 
         [HttpGet("speciality/{speciality}")]
         public async Task<ActionResult<IEnumerable<CaseDto>>> GetBySpeciality(
@@ -67,8 +72,20 @@ namespace CaseService.Api.Controllers
             return Ok(list);
         }
 
-        // 4) Transition a Case to InReview
-        // POST /api/cases/{id}/inreview
+        [HttpPost("{caseId:guid}/add-solution")]
+        public async Task<IActionResult> AddSolution(
+            Guid caseId,
+            [FromBody] string solution,
+            CancellationToken ct)
+        {
+            if (!Guid.TryParse(Request.Headers["X-User-Id"], out var consultantId))
+                return Unauthorized();
+
+            Console.WriteLine(consultantId);
+            await _caseService.AddSolutionAsync(caseId, solution, consultantId, ct);
+            return NoContent();
+        }
+       
         [HttpPost("{id:guid}/inreview")]
         public async Task<IActionResult> MoveToInReview(
             Guid id,
@@ -88,6 +105,32 @@ namespace CaseService.Api.Controllers
             await _caseService.FinishCaseAsync(id, ct);
             return NoContent();
         }
+
+
+        [HttpPost("{id:guid}/add-suggestions")]
+        public async Task<IActionResult> FinishCase(
+            Guid id,
+            [FromBody] CaseSuggestionsDto req,
+            CancellationToken ct)
+        {
+            var sugs = new List<string>();
+            foreach (var suggestion in req.suggestions) {
+                sugs.Add(suggestion.text);
+            }
+            await _caseService.AddSuggestionsAsync(id,sugs, ct);
+            return NoContent();
+        }
+
+        [HttpPost("email")]
+        public async Task<IActionResult> SendEmail(
+            SendMailRequest sendMailRequest,
+            CancellationToken ct
+            )
+        {
+
+            await _mailService.SendSolutionMailAsync(sendMailRequest, ct);
+            return Ok("Email sent successfully");
+        }
         /*
 		// 6) Delete a Case
 		// DELETE /api/cases/{id}
@@ -103,10 +146,5 @@ namespace CaseService.Api.Controllers
     }
 
 
-    // These simple DTOs/request‐models live in your Api project
-    public record SubmitCaseRequest(
-        string Email,
-        string Description,
-        string Speciality
-    );
+
 }

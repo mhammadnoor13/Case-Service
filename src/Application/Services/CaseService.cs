@@ -1,46 +1,57 @@
-﻿using CaseService.API.CaseService.Application.Dtos;
+﻿using Application.Dtos;
+using Application.Helpers;
+using Application.Interfaces;
+using CaseService.API.CaseService.Application.Dtos;
 using CaseService.API.CaseService.Application.Interfaces;
 using CaseService.API.CaseService.Domain.Entities;
 using Contracts;
-
-//using Contracts;
+using Contracts.Shared.Events;
+using Contracts.Shared.Responses;
 using MassTransit;
+using Microsoft.Extensions.Logging;
 
 namespace CaseService.API.CaseService.Application.Services
 {
     public class CaseService : ICaseService
     {
         private readonly ICaseRepository _repo;
+        private readonly IEmbeddingClient _embeddingClient;
+        private readonly IMailService _mailService;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly ILogger<CaseService> _logger;
+
 
         public CaseService(
             ICaseRepository repo,
-            IPublishEndpoint publishEndpoint)
+            IPublishEndpoint publishEndpoint,
+            ILogger<CaseService> logger,
+            IEmbeddingClient embeddingClient,
+            IMailService mailService)
         {
             _repo = repo;
             _publishEndpoint = publishEndpoint;
-
+            _logger = logger;
+            _embeddingClient = embeddingClient;
+            _mailService = mailService;
         }
 
         public async Task<Guid> SubmitCaseAsync(
             string email,
+            string title,
             string description,
             string speciality,
             CancellationToken ct)
         {
-            // 1) Create the domain entity (validates inputs)
-            var c = Case.Create(email, description, speciality);
+            var c = Case.Create(email,title, description, speciality);
 
-            // 2) Persist it via the repository
             await _repo.SaveAsync(c, ct);
 
-            await _publishEndpoint.Publish<ICaseSubmitted>(
-                new
-                {
-                    Id = c.Id,
-                    Speciality = c.Speciality
-                }
-                );
+
+            await _publishEndpoint.Publish<CaseSubmitted>(new
+            {
+               CaseId = c.Id,
+               Speciality = c.Speciality
+            },ct);
 
             return c.Id;
         }
@@ -87,11 +98,11 @@ namespace CaseService.API.CaseService.Application.Services
         private static CaseDto ToDto(Case c)
             => new CaseDto(
                 c.Id,
-                c.Email,
+                c.Title,
                 c.Description,
-                c.Speciality,
                 c.Status,
-                c.CreatedAt);
+                c.CreatedAt,
+                c.Suggestions);
 
         public async Task<IEnumerable<CaseDto>> GetCasesBySpecialityAsync(string speciality, CancellationToken ct)
         {
@@ -101,27 +112,53 @@ namespace CaseService.API.CaseService.Application.Services
             // 2) Map each to a DTO and return
             return cases.Select(c => new CaseDto(
                 c.Id,
-                c.Email,
+                c.Title,
                 c.Description,
-                c.Speciality,
                 c.Status,
-                c.CreatedAt
-            ));
+                c.CreatedAt,
+                c.Suggestions));
         }
 
-        public async Task<IEnumerable<CaseDto>> GetCasesByIdsAsync(IEnumerable<Guid> caseIds, CancellationToken ct)
+        public async Task<IEnumerable<CaseToCardDto>> GetCasesByIdsAsync(IEnumerable<Guid> caseIds, CancellationToken ct)
         {
+            const int BriefLength = 100;
             var cases = await _repo.GetBulkByIdsAsync(caseIds, ct);
             
-            var dtos = cases.Select(c=> new CaseDto(
+            var dtos = cases.Select(c=> new CaseToCardDto(
                 c.Id,
-                c.Email, 
-                c.Description,
-                c.Speciality,
+                c.Title, 
+                c.Description.Truncate(BriefLength),
                 c.Status,
                 c.CreatedAt)).ToList();
 
             return dtos;
+        }
+
+        public async Task AddSuggestionsAsync(Guid id, List<string> suggestions, CancellationToken ct)
+        {
+            var c = await _repo.GetByIdAsync(id, ct)
+                 ?? throw new KeyNotFoundException($"Case {id} not found");
+
+            c.AddSuggestions(suggestions);
+            await _repo.SaveAsync(c,ct);
+        }
+
+        public async Task AddSolutionAsync(Guid caseId, string solution, Guid consultantId, CancellationToken ct)
+        {
+            var c = await _repo.GetByIdAsync(caseId, ct)
+                 ?? throw new KeyNotFoundException($"Case {caseId} not found");
+
+            c.SetSolution(solution);
+            await _repo.SaveAsync(c, ct);
+
+            var embedOk = await _embeddingClient.EmbedCaseAsync(solution, consultantId, ct);
+            if (!embedOk)
+                throw new InvalidOperationException("Embedding service failed.");
+
+            var sendMailRequest = new SendMailRequest(c.Email, "Solved", solution);
+
+            await _mailService.SendSolutionMailAsync(sendMailRequest, ct);
+
         }
     }
 }

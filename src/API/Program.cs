@@ -1,7 +1,11 @@
 
+using Application.Interfaces;
 using CaseService.API.CaseService.Application.Interfaces;
 using CaseService.API.CaseService.Infrastructure.Messaging;
 using CaseService.API.CaseService.Infrastructure.Repositories;
+using Infrastructure;
+using Infrastructure.Messaging;
+using Infrastructure.Options;
 using MassTransit;
 using MongoDB.Driver;
 
@@ -10,6 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 // 1) Add Swagger for API exploration
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.Configure<GmailOptions>(
+    builder.Configuration.GetSection(GmailOptions.GmailOptionskey));
 
 builder.Services.AddCors(options =>
 {
@@ -41,6 +48,8 @@ builder.Services.AddMassTransit(busConfigurator =>
 
     });
 });
+var host = builder.Configuration["MessageBroker:Host"];
+Console.WriteLine($"RabbitMQ Host from config: {host}");
 
 
 // 2) Configure MongoDB
@@ -54,6 +63,8 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddScoped<ICaseRepository, MongoCaseRepository>();
 builder.Services.AddScoped<ICaseEventPublisher, RabbitMqCaseEventPublisher>();  // stub for now
 builder.Services.AddScoped<ICaseService, CaseService.API.CaseService.Application.Services.CaseService>();
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddScoped<IMailService, GmailService>();
 
 // 4) Add controllers
 builder.Services.AddControllers();

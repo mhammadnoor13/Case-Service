@@ -1,24 +1,23 @@
-﻿namespace CaseService.API.CaseService.Application.Dtos
+﻿using Domain.Entities;
+
+namespace CaseService.API.CaseService.Application.Dtos
 {
     public class CaseDto
     {
         public Guid Id { get; set; }
-        public string Email { get; set; } = default!;
+        public string Title { get; set; } = default!;
         public string Description { get; set; } = default!;
-        public string Speciality { get; set; } = default!;
         public string Status { get; set; } = "Submitted";
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        public CaseDto(Guid id, string email, string decription, string speciality, string status, DateTime createdAt)
+        public List<Suggestion>? Suggestions { get; set; } = new List<Suggestion>();
+        public CaseDto(Guid id, string title, string description, string status, DateTime createdAt, List<Suggestion> sugs)
         {
             Id = id;
-            Email = email;
-            Description = decription;
-            Speciality = speciality;
+            Title = title;
+            Description = description;
             Status = status;
             CreatedAt = createdAt;
-
-
+            Suggestions = sugs;
 
         }
     }
