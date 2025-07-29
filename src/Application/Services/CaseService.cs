@@ -156,6 +156,7 @@ namespace CaseService.API.CaseService.Application.Services
                 throw new InvalidOperationException("Embedding service failed.");
 
             var sendMailRequest = new SendMailRequest(c.Email, "Solved", solution);
+            _logger.LogInformation(sendMailRequest.Recipient);
 
             await _mailService.SendSolutionMailAsync(sendMailRequest, ct);
 

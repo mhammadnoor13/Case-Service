@@ -1,15 +1,15 @@
 ﻿using Application.Dtos;
 using Application.Interfaces;
-using CaseService.API.CaseService.Domain.Entities;
 using Infrastructure.Options;
-using MassTransit.Configuration;
+using MailKit.Security;
+using MailKit.Net.Smtp;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MimeKit;
+using Org.BouncyCastle.Ocsp;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Net.Mail;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Infrastructure.Messaging
@@ -17,31 +17,62 @@ namespace Infrastructure.Messaging
     public class GmailService : IMailService
     {
         private readonly GmailOptions _gmailOptions;
-        public GmailService(IOptions<GmailOptions> gmailOptions)
+        private readonly ILogger<GmailService> _logger;
+
+        public GmailService(
+            IOptions<GmailOptions> gmailOptions,
+            ILogger<GmailService> logger)
         {
             _gmailOptions = gmailOptions.Value;
+            _logger = logger;
+
         }
 
         public async Task SendSolutionMailAsync(SendMailRequest sendMailRequest, CancellationToken ct)
         {
-            MailMessage mailMessage = new MailMessage
+            _logger.LogInformation("🔔 [SMTP] Preparing to send email to {Recipient}", sendMailRequest.Recipient);
+
+            var mailMessage = new MimeMessage();
+            mailMessage.From.Add(MailboxAddress.Parse(_gmailOptions.Email));
+            mailMessage.To.Add(MailboxAddress.Parse(sendMailRequest.Recipient));
+            mailMessage.Subject = sendMailRequest.Subject;
+            mailMessage.Body = new TextPart("plain") { Text = sendMailRequest.Body };
+
+            using var protocolLog = new MailKit.ProtocolLogger(Console.OpenStandardError());
+
+
+            using var client = new SmtpClient(protocolLog);
+
+            var secureOption = SecureSocketOptions.SslOnConnect;
+
+
+
+            _logger.LogInformation("Connecting to {Host}:{Port} (TLS={Option})…",
+                _gmailOptions.Host, _gmailOptions.Port, secureOption);
+
+
+
+    
+            await client.ConnectAsync(_gmailOptions.Host, _gmailOptions.Port, secureOption, ct);
+
+            _logger.LogInformation("Authenticating as {Email}…", _gmailOptions.Email);
+
+            if (_gmailOptions.Host.Equals("smtp.gmail.com", StringComparison.OrdinalIgnoreCase))
             {
-                From = new MailAddress(_gmailOptions.Email),
-                Subject = sendMailRequest.Subject,
-                Body = sendMailRequest.Body,
-            };
+                _logger.LogInformation("Authenticating as {Email}…", _gmailOptions.Email);
+                await client.AuthenticateAsync(_gmailOptions.Email, _gmailOptions.Password, ct);
+            }
+            else
+            {
+                _logger.LogInformation("Skipping authentication on {Host}", _gmailOptions.Host);
+            }
 
-            mailMessage.To.Add(sendMailRequest.Recipient);
 
-            using var smtpClient = new SmtpClient();
-            smtpClient.Host = _gmailOptions.Host;
-            smtpClient.Port = _gmailOptions.Port;
-            smtpClient.Credentials = new NetworkCredential(
-                _gmailOptions.Email, _gmailOptions.Password
-                );
-            smtpClient.EnableSsl = true;
+            _logger.LogInformation("Sending message to {Recipient}…", sendMailRequest.Recipient);
+            await client.SendAsync(mailMessage, ct);
 
-            await smtpClient.SendMailAsync(mailMessage);
+            _logger.LogInformation("Disconnecting…");
+            await client.DisconnectAsync(true, ct);
         }
     }
 }

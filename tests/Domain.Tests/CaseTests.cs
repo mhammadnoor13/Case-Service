@@ -11,7 +11,7 @@ public class CaseTests
         var description = "Need orthopedic consult";
         var speciality = "Orthopedics";
 
-        var @case = Case.Create(email, description, speciality);
+        var @case = Case.Create(email, description, speciality,"Cardiology");
 
         @case.Id.Should().NotBeEmpty();                      
         @case.Email.Should().Be("USER@example.com");             // trimmed
@@ -35,7 +35,7 @@ public class CaseTests
     string? speciality,
     string expectedMessage)
     {
-        Action act = () => Case.Create(email!, description!, speciality!);
+        Action act = () => Case.Create(email!, description!, speciality!, "Cardiology");
 
 
         act.Should()
@@ -49,7 +49,9 @@ public class CaseTests
         var @case = Case.Create(
             email: "user@example.com",
             description: "Need ortho consult",
-            speciality: "Orthopedics");
+            speciality: "Orthopedics",
+            title: "anything"
+            );
 
         @case.MoveToInReview();
 
@@ -62,7 +64,8 @@ public class CaseTests
         var @case = Case.Create(
             email: "user@example.com",
             description: "Need ortho consult",
-            speciality: "Orthopedics");
+            speciality: "Orthopedics",
+            title: "anything");
 
         @case.MoveToInReview();  
 
@@ -80,7 +83,7 @@ public class CaseTests
         var @case = Case.Create(
             email: "user@example.com",
             description: "Need ortho consult",
-            speciality: "Orthopedics");
+            speciality: "Orthopedics", title: "anything");
 
         @case.MoveToInReview();                
 
@@ -96,7 +99,7 @@ public class CaseTests
         var @case = Case.Create(
             email: "user@example.com",
             description: "Need ortho consult",
-            speciality: "Orthopedics");
+            speciality: "Orthopedics", title: "anything");
 
         Action act = () => @case.Finish();
 
@@ -111,7 +114,8 @@ public class CaseTests
         var @case = Case.Create(
             email: "user@example.com",
             description: "Need ortho consult",
-            speciality: "Orthopedics");
+            speciality: "Orthopedics",
+            title:"anything");
 
         @case.MoveToInReview();   
         @case.Finish();           

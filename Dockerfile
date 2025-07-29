@@ -1,9 +1,10 @@
 # Back-End/Services/Case-Service/Dockerfile
 
 # 1) Use full SDK so we have dotnet-watch and build tools
-FROM mcr.microsoft.com/dotnet/sdk:8.0
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS base
 
-# 2) Set working directory where we'll mount your code
+
+
 WORKDIR /src
 
 # 3) Ensure reliable file‑watching on a Windows bind mount
