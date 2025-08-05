@@ -42,7 +42,7 @@ namespace CaseService.API.CaseService.Application.Services
             string speciality,
             CancellationToken ct)
         {
-            var c = Case.Create(email,title, description, speciality);
+            var c = Case.Create(email, title, description, speciality);
 
             await _repo.SaveAsync(c, ct);
 
@@ -53,19 +53,19 @@ namespace CaseService.API.CaseService.Application.Services
                Speciality = c.Speciality
             },ct);
 
+            c.MoveToAssigned();
+            await _repo.SaveAsync(c, ct);
+            
             return c.Id;
         }
 
         public async Task MoveToInReviewAsync(Guid id, CancellationToken ct)
         {
-            // 1) Load the case
             var c = await _repo.GetByIdAsync(id, ct)
                    ?? throw new KeyNotFoundException($"Case {id} not found");
 
-            // 2) Apply domain behavior
-            c.MoveToInReview();
+            c.MoveToReview();
 
-            // 3) Persist new status
             await _repo.SaveAsync(c, ct);
 
             // 4) Publish the “InReview” integration event
@@ -106,10 +106,8 @@ namespace CaseService.API.CaseService.Application.Services
 
         public async Task<IEnumerable<CaseDto>> GetCasesBySpecialityAsync(string speciality, CancellationToken ct)
         {
-            // 1) Ask the repository for all matching Case entities
             var cases = await _repo.GetBySpecialityAsync(speciality, ct);
 
-            // 2) Map each to a DTO and return
             return cases.Select(c => new CaseDto(
                 c.Id,
                 c.Title,
@@ -134,12 +132,13 @@ namespace CaseService.API.CaseService.Application.Services
             return dtos;
         }
 
-        public async Task AddSuggestionsAsync(Guid id, List<string> suggestions, CancellationToken ct)
+        public async Task AddSuggestionsAsync(AddSuggestionsRequest request, CancellationToken ct)
         {
-            var c = await _repo.GetByIdAsync(id, ct)
-                 ?? throw new KeyNotFoundException($"Case {id} not found");
+            var c = await _repo.GetByIdAsync(request.CaseId, ct)
+                 ?? throw new KeyNotFoundException($"Case {request.CaseId} not found");
 
-            c.AddSuggestions(suggestions);
+            c.AddSuggestions(request.Suggestions);
+
             await _repo.SaveAsync(c,ct);
         }
 

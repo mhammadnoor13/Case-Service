@@ -64,7 +64,7 @@ builder.Services.AddScoped<ICaseRepository, MongoCaseRepository>();
 builder.Services.AddScoped<ICaseEventPublisher, RabbitMqCaseEventPublisher>();  // stub for now
 builder.Services.AddScoped<ICaseService, CaseService.API.CaseService.Application.Services.CaseService>();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddScoped<IMailService, GmailService>();
+builder.Services.AddScoped<IMailService, MailClient>();
 
 // 4) Add controllers
 builder.Services.AddControllers();

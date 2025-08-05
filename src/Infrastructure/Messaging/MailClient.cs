@@ -14,14 +14,14 @@ using System.Threading.Tasks;
 
 namespace Infrastructure.Messaging
 {
-    public class GmailService : IMailService
+    public class MailClient : IMailService
     {
         private readonly GmailOptions _gmailOptions;
-        private readonly ILogger<GmailService> _logger;
+        private readonly ILogger<MailClient> _logger;
 
-        public GmailService(
+        public MailClient(
             IOptions<GmailOptions> gmailOptions,
-            ILogger<GmailService> logger)
+            ILogger<MailClient> logger)
         {
             _gmailOptions = gmailOptions.Value;
             _logger = logger;
@@ -30,7 +30,6 @@ namespace Infrastructure.Messaging
 
         public async Task SendSolutionMailAsync(SendMailRequest sendMailRequest, CancellationToken ct)
         {
-            _logger.LogInformation("🔔 [SMTP] Preparing to send email to {Recipient}", sendMailRequest.Recipient);
 
             var mailMessage = new MimeMessage();
             mailMessage.From.Add(MailboxAddress.Parse(_gmailOptions.Email));
@@ -47,7 +46,6 @@ namespace Infrastructure.Messaging
 
 
 
-            _logger.LogInformation("Connecting to {Host}:{Port} (TLS={Option})…",
                 _gmailOptions.Host, _gmailOptions.Port, secureOption);
 
 
@@ -55,17 +53,6 @@ namespace Infrastructure.Messaging
     
             await client.ConnectAsync(_gmailOptions.Host, _gmailOptions.Port, secureOption, ct);
 
-            _logger.LogInformation("Authenticating as {Email}…", _gmailOptions.Email);
-
-            if (_gmailOptions.Host.Equals("smtp.gmail.com", StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogInformation("Authenticating as {Email}…", _gmailOptions.Email);
-                await client.AuthenticateAsync(_gmailOptions.Email, _gmailOptions.Password, ct);
-            }
-            else
-            {
-                _logger.LogInformation("Skipping authentication on {Host}", _gmailOptions.Host);
-            }
 
 
             _logger.LogInformation("Sending message to {Recipient}…", sendMailRequest.Recipient);

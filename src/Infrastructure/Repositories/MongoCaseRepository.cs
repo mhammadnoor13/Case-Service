@@ -10,13 +10,11 @@ namespace CaseService.API.CaseService.Infrastructure.Repositories
 
         public MongoCaseRepository(IMongoDatabase database)
         {
-            // Assumes you injected IMongoDatabase via DI
             _collection = database.GetCollection<Case>("Cases");
         }
 
         public Task SaveAsync(Case c, CancellationToken ct)
         {
-            // Upsert: replaces existing document or inserts new one
             return _collection.ReplaceOneAsync(
                 filter: Builders<Case>.Filter.Eq(x => x.Id, c.Id),
                 replacement: c,
@@ -48,7 +46,11 @@ namespace CaseService.API.CaseService.Infrastructure.Repositories
         public async Task<IEnumerable<Case>> GetBulkByIdsAsync(IEnumerable<Guid> caseIds, CancellationToken ct)
         {
             var filter = Builders<Case>.Filter.In(c => c.Id, caseIds);
-            return await _collection.Find(filter).ToListAsync();
+            return await _collection
+                .Find(filter)
+                .Sort(Builders<Case>.Sort.Ascending(c => c.CreatedAt))
+                .ToListAsync(ct);
         }
+
     }
 }

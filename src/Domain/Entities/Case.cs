@@ -14,7 +14,7 @@ namespace CaseService.API.CaseService.Domain.Entities
         public required string Title { get; set; } = default!;
         public required string Description { get; set; } = default!;
         public required string Speciality { get; set; } = default!;
-        public string Status { get; set; } = "Submitted";
+        public string Status { get; set; } = "New";
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public List<Suggestion>? Suggestions { get; set; } = new List<Suggestion>();
         public string Solution { get; set; } = default!;
@@ -24,7 +24,6 @@ namespace CaseService.API.CaseService.Domain.Entities
         #region Factory
         public static Case Create(string email, string title, string description, string speciality)
         {
-            // 1) Basic null/empty checks
             if (string.IsNullOrWhiteSpace(email))
                 throw new Exception("Email is required.");
             if (string.IsNullOrWhiteSpace(title))
@@ -76,18 +75,25 @@ namespace CaseService.API.CaseService.Domain.Entities
         
 
         #region Status Transitions
-        public void MoveToInReview()
+        public void MoveToAssigned()
         {
-            if (Status != "Submitted")
-                throw new Exception("Can only move submitted cases to InReview.");
-            Status = "InReview";
+            if (Status != "New")
+                throw new Exception("Can only move New cases to Assigned.");
+            Status = "Assigned";
         }
+        public void MoveToReview()
+        {
+            if (Status != "Assigned")
+                throw new Exception("Can only move Assigned cases to Review.");
+            Status = "ReadyToReview";
+        }
+
 
         public void Finish()
         {
             if (Status == "Finished")
                 throw new Exception("Case is already Finished.");
-            if (Status != "InReview")
+            if (Status != "ReadyToReview")
                 throw new Exception("Can only finish cases that are InReview.");
             Status = "Finished";
         }

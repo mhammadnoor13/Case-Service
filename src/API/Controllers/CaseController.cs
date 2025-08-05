@@ -15,11 +15,13 @@ namespace CaseService.Api.Controllers
     {
         private readonly ICaseService _caseService;
         private readonly IMailService _mailService;
+        private readonly ILogger<CasesController> _logger;
 
-        public CasesController(ICaseService caseService, IMailService mailService)
+        public CasesController(ICaseService caseService, IMailService mailService, ILogger<CasesController> logger)
         {
             _caseService = caseService;
             _mailService = mailService;
+            _logger = logger;
         }
 
 
@@ -30,6 +32,8 @@ namespace CaseService.Api.Controllers
             [FromBody] CreateCaseRequest req,
             CancellationToken ct)
         {
+            _logger.LogInformation("SubmitCase called for {Email}, speciality={Speciality}", req.Email, req.Speciality);
+
             var caseId = await _caseService.SubmitCaseAsync(
                 req.Email,req.Title, req.Description, req.Speciality, ct);
 
@@ -81,7 +85,6 @@ namespace CaseService.Api.Controllers
             if (!Guid.TryParse(Request.Headers["X-User-Id"], out var consultantId))
                 return Unauthorized();
 
-            Console.WriteLine(consultantId);
             await _caseService.AddSolutionAsync(caseId, solution, consultantId, ct);
             return NoContent();
         }
@@ -95,8 +98,7 @@ namespace CaseService.Api.Controllers
             return NoContent();  // 204 No Content
         }
 
-        // 5) Finish a Case
-        // POST /api/cases/{id}/finish
+
         [HttpPost("{id:guid}/finish")]
         public async Task<IActionResult> FinishCase(
             Guid id,
@@ -113,11 +115,13 @@ namespace CaseService.Api.Controllers
             [FromBody] CaseSuggestionsDto req,
             CancellationToken ct)
         {
-            var sugs = new List<string>();
-            foreach (var suggestion in req.suggestions) {
-                sugs.Add(suggestion.text);
-            }
-            await _caseService.AddSuggestionsAsync(id,sugs, ct);
+
+            var command = new AddSuggestionsRequest(
+                CaseId: id,
+                Suggestions: req.suggestions.Select(s => s.text)
+                );
+
+            await _caseService.AddSuggestionsAsync(command, ct);
             return NoContent();
         }
 
@@ -132,8 +136,6 @@ namespace CaseService.Api.Controllers
             return Ok("Email sent successfully");
         }
         /*
-		// 6) Delete a Case
-		// DELETE /api/cases/{id}
 		[HttpDelete("{id:guid}")]
 		public async Task<IActionResult> DeleteCase(
 			Guid id,
