@@ -1,4 +1,5 @@
 
+using Application;
 using Application.Interfaces;
 using CaseService.API.CaseService.Application.Interfaces;
 using CaseService.API.CaseService.Infrastructure.Messaging;
@@ -15,8 +16,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.Configure<GmailOptions>(
-    builder.Configuration.GetSection(GmailOptions.GmailOptionskey));
 
 builder.Services.AddCors(options =>
 {
@@ -33,46 +32,19 @@ builder.Services.AddCors(options =>
 
 
 
-builder.Services.AddMassTransit(busConfigurator =>
-{
-    busConfigurator.SetKebabCaseEndpointNameFormatter();
-    busConfigurator.UsingRabbitMq((context, configurator) =>
-    {
-        configurator.Host(new Uri(builder.Configuration["MessageBroker:Host"]!), h =>
-        {
-            h.Username(builder.Configuration["MessageBroker:Username"]);
-            h.Password(builder.Configuration["MessageBroker:Password"]);
-        });
 
-        configurator.ConfigureEndpoints(context);
-
-    });
-});
-var host = builder.Configuration["MessageBroker:Host"];
-Console.WriteLine($"RabbitMQ Host from config: {host}");
-
-
-// 2) Configure MongoDB
-builder.Services.AddSingleton<IMongoClient>(sp =>
-    new MongoClient(builder.Configuration.GetConnectionString("Mongo")));
-builder.Services.AddScoped(sp =>
-    sp.GetRequiredService<IMongoClient>()
-      .GetDatabase(builder.Configuration["Mongo:DatabaseName"]));
-
-// 3) Register your ports & services
-builder.Services.AddScoped<ICaseRepository, MongoCaseRepository>();
-builder.Services.AddScoped<ICaseEventPublisher, RabbitMqCaseEventPublisher>();  // stub for now
-builder.Services.AddScoped<ICaseService, CaseService.API.CaseService.Application.Services.CaseService>();
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddScoped<IMailService, MailClient>();
-
-// 4) Add controllers
 builder.Services.AddControllers();
+
+
+
+
+builder.Services.AddApplication(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration);
+
 
 var app = builder.Build();
 
-// 5) Enable middleware
-// 2) In dev, skip HTTPS redirection so OPTIONS won’t be redirected
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();

@@ -53,7 +53,7 @@ public class CaseTests
             title: "anything"
             );
 
-        @case.MoveToInReview();
+        @case.MoveToReview();
 
         @case.Status.Should().Be("InReview");  
     }
@@ -67,10 +67,10 @@ public class CaseTests
             speciality: "Orthopedics",
             title: "anything");
 
-        @case.MoveToInReview();  
+        @case.MoveToReview();  
 
         
-        Action act = () => @case.MoveToInReview();   // attempt the transition again
+        Action act = () => @case.MoveToReview();   // attempt the transition again
 
         act.Should()
            .Throw<Exception>()
@@ -85,7 +85,7 @@ public class CaseTests
             description: "Need ortho consult",
             speciality: "Orthopedics", title: "anything");
 
-        @case.MoveToInReview();                
+        @case.MoveToReview();                
 
         @case.Finish();                        
 
@@ -117,7 +117,7 @@ public class CaseTests
             speciality: "Orthopedics",
             title:"anything");
 
-        @case.MoveToInReview();   
+        @case.MoveToReview();   
         @case.Finish();           
 
         Action act = () => @case.Finish();

@@ -1,12 +1,10 @@
 ﻿using Application.Dtos;
+using Application.Events;
 using Application.Helpers;
 using Application.Interfaces;
 using CaseService.API.CaseService.Application.Dtos;
 using CaseService.API.CaseService.Application.Interfaces;
 using CaseService.API.CaseService.Domain.Entities;
-using Contracts;
-using Contracts.Shared.Events;
-using Contracts.Shared.Responses;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +16,7 @@ namespace CaseService.API.CaseService.Application.Services
         private readonly IEmbeddingClient _embeddingClient;
         private readonly IMailService _mailService;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly ICaseEventPublisher _caseEventPublisher;
         private readonly ILogger<CaseService> _logger;
 
 
@@ -46,14 +45,10 @@ namespace CaseService.API.CaseService.Application.Services
 
             await _repo.SaveAsync(c, ct);
 
-
-            await _publishEndpoint.Publish<CaseSubmitted>(new
-            {
-               CaseId = c.Id,
-               Speciality = c.Speciality
-            },ct);
+            await _caseEventPublisher.PublishCaseSubmittedAsync(c.Id, c.Speciality, ct);
 
             c.MoveToAssigned();
+
             await _repo.SaveAsync(c, ct);
             
             return c.Id;
@@ -68,23 +63,20 @@ namespace CaseService.API.CaseService.Application.Services
 
             await _repo.SaveAsync(c, ct);
 
-            // 4) Publish the “InReview” integration event
+            // TODO Publish the “InReview” integration event - not necessary now
             //await _events.PublishCaseInReviewAsync(id, ct);
         }
 
         public async Task FinishCaseAsync(Guid id, CancellationToken ct)
         {
-            // 1) Load the case
             var c = await _repo.GetByIdAsync(id, ct)
                    ?? throw new KeyNotFoundException($"Case {id} not found");
 
-            // 2) Apply domain behavior
             c.Finish();
 
-            // 3) Persist new status
             await _repo.SaveAsync(c, ct);
 
-            // 4) Publish the “Finished” integration event
+            // TODO Publish the “Finished” integration event
             //await _events.PublishCaseFinishedAsync(id, ct);
         }
 
@@ -144,17 +136,18 @@ namespace CaseService.API.CaseService.Application.Services
 
         public async Task AddSolutionAsync(Guid caseId, string solution, Guid consultantId, CancellationToken ct)
         {
-            var c = await _repo.GetByIdAsync(caseId, ct)
+            var cs = await _repo.GetByIdAsync(caseId, ct)
                  ?? throw new KeyNotFoundException($"Case {caseId} not found");
 
-            c.SetSolution(solution);
-            await _repo.SaveAsync(c, ct);
+            cs.SetSolution(solution);
+            await _repo.SaveAsync(cs, ct);
 
             var embedOk = await _embeddingClient.EmbedCaseAsync(solution, consultantId, ct);
+
             if (!embedOk)
                 throw new InvalidOperationException("Embedding service failed.");
 
-            var sendMailRequest = new SendMailRequest(c.Email, "Solved", solution);
+            var sendMailRequest = new SendMailRequest(cs.Email, "Solved", solution);
             _logger.LogInformation(sendMailRequest.Recipient);
 
             await _mailService.SendSolutionMailAsync(sendMailRequest, ct);

@@ -43,17 +43,8 @@ namespace Infrastructure.Messaging
             using var client = new SmtpClient(protocolLog);
 
             var secureOption = SecureSocketOptions.SslOnConnect;
-
-
-
-                _gmailOptions.Host, _gmailOptions.Port, secureOption);
-
-
-
     
             await client.ConnectAsync(_gmailOptions.Host, _gmailOptions.Port, secureOption, ct);
-
-
 
             _logger.LogInformation("Sending message to {Recipient}…", sendMailRequest.Recipient);
             await client.SendAsync(mailMessage, ct);

@@ -32,6 +32,7 @@ namespace CaseService.API.CaseService.Infrastructure.Repositories
         public async Task<IEnumerable<Case>> GetBySpecialityAsync(string speciality, CancellationToken ct)
         {
             var bySpeciality = Builders<Case>.Filter.Eq(x => x.Speciality, speciality);
+            //TODO - this is a bit of a hack to avoid showing cases that have already been assigned to a doctor. We should have a better way to track this.
             var byStatus = Builders<Case>.Filter.Eq(x => x.Status, "Submitted");
             var filter = Builders<Case>.Filter.And(bySpeciality, byStatus);
             var list = await _collection.Find(filter).ToListAsync(ct);

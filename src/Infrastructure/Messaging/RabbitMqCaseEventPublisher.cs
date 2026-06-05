@@ -1,6 +1,6 @@
-﻿using CaseService.API.CaseService.Application.Interfaces;
+﻿using Application.Events;
+using CaseService.API.CaseService.Application.Interfaces;
 using MassTransit;
-//using Contracts;
 
 namespace CaseService.API.CaseService.Infrastructure.Messaging
 {
@@ -8,13 +8,15 @@ namespace CaseService.API.CaseService.Infrastructure.Messaging
     {
         private readonly IPublishEndpoint _publishEndpoint;
 
-        public async Task PublishCaseCreatedAsync(Guid caseId, string speciality, CancellationToken ct)
+        public RabbitMqCaseEventPublisher(IPublishEndpoint publishEndpoint)
         {
-            /*await _publishEndpoint.Publish<ICaseSubmitted>(new
-            {
-                Id = caseId, Speciality = speciality
-            });
-            */
+            _publishEndpoint = publishEndpoint;
+        }
+
+        public Task PublishCaseSubmittedAsync(Guid caseId, string speciality, CancellationToken ct)
+        {
+            var caseSubmittedEvent = new CaseSubmittedEvent(caseId, speciality);
+            return _publishEndpoint.Publish(caseSubmittedEvent,ct);
         }
 
         public Task PublishCaseFinishedAsync(Guid caseId, CancellationToken ct)

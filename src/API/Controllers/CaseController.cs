@@ -57,7 +57,7 @@ namespace CaseService.Api.Controllers
         }
 
         [HttpPost("bulk")]
-        public async Task<IActionResult> GetByIds([FromBody] List<Guid> caseIds, CancellationToken ct)
+        public async Task<ActionResult<IEnumerable<CaseToCardDto>>> GetByIds([FromBody] List<Guid> caseIds, CancellationToken ct)
         {
             if (caseIds == null || !caseIds.Any())
                 return BadRequest("Must supply at least one caseId.");
@@ -78,8 +78,9 @@ namespace CaseService.Api.Controllers
 
         [HttpPost("{caseId:guid}/add-solution")]
         public async Task<IActionResult> AddSolution(
-            Guid caseId,
+            [FromRoute] Guid caseId,
             [FromBody] string solution,
+            [FromHeader(Name = "X-User-Id")] string userId,
             CancellationToken ct)
         {
             if (!Guid.TryParse(Request.Headers["X-User-Id"], out var consultantId))
@@ -110,8 +111,8 @@ namespace CaseService.Api.Controllers
 
 
         [HttpPost("{id:guid}/add-suggestions")]
-        public async Task<IActionResult> FinishCase(
-            Guid id,
+        public async Task<IActionResult> AddSuggestions(
+            [FromRoute] Guid id,
             [FromBody] CaseSuggestionsDto req,
             CancellationToken ct)
         {
@@ -135,6 +136,7 @@ namespace CaseService.Api.Controllers
             await _mailService.SendSolutionMailAsync(sendMailRequest, ct);
             return Ok("Email sent successfully");
         }
+
         /*
 		[HttpDelete("{id:guid}")]
 		public async Task<IActionResult> DeleteCase(

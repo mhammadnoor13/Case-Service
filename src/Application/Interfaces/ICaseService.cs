@@ -1,6 +1,5 @@
 ﻿using Application.Dtos;
 using CaseService.API.CaseService.Application.Dtos;
-using Contracts.Shared.Responses;
 
 namespace CaseService.API.CaseService.Application.Interfaces
 {

@@ -32,10 +32,8 @@ namespace Infrastructure.Messaging
             
             using var resp = await httpClient.SendAsync(req, ct);
 
-            if (!resp.IsSuccessStatusCode)
-                return false;
-
-            return true;
+            return resp.IsSuccessStatusCode;
+  
 
         }
     }
